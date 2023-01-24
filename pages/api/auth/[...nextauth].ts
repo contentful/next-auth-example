@@ -1,4 +1,5 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { getOrCreateUser } from "../../../contentful";
 
@@ -7,6 +8,10 @@ import { getOrCreateUser } from "../../../contentful";
 export const authOptions: NextAuthOptions = {
   // https://next-auth.js.org/configuration/providers/oauth
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
     CredentialsProvider({
       name: "Email and Password",
       credentials: {
@@ -36,6 +41,13 @@ export const authOptions: NextAuthOptions = {
     colorScheme: "light",
   },
   callbacks: {
+    async signIn({ account, profile }) {
+      if (account && account.provider === "google" && profile?.email) {
+        getOrCreateUser(profile.email, "");
+        return true;
+      }
+      return true; // Do different verification for other providers that don't have `email_verified`
+    },
     async jwt({ token }) {
       token.userRole = "admin";
       return token;
